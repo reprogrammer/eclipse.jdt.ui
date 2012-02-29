@@ -215,6 +215,7 @@ public class QuickAssistProcessor implements IQuickAssistProcessor {
 				|| getConvertEnhancedForLoopProposal(context, coveringNode, null)
 				|| getExtractVariableProposal(context, false, null)
 				|| getExtractMethodProposal(context, coveringNode, false, null)
+				|| getIntroduceParameterProposal(context, coveringNode, false, null)
 				|| getInlineLocalProposal(context, coveringNode, null)
 				|| getConvertLocalToFieldProposal(context, coveringNode, null)
 				|| getConvertAnonymousToNestedProposal(context, coveringNode, null)
@@ -258,6 +259,7 @@ public class QuickAssistProcessor implements IQuickAssistProcessor {
 				getCreateInSuperClassProposals(context, coveringNode, resultingCollections);
 				getExtractVariableProposal(context, problemsAtLocation, resultingCollections);
 				getExtractMethodProposal(context, coveringNode, problemsAtLocation, resultingCollections);
+				getIntroduceParameterProposal(context, coveringNode, problemsAtLocation, resultingCollections);
 				getInlineLocalProposal(context, coveringNode, resultingCollections);
 				getConvertLocalToFieldProposal(context, coveringNode, resultingCollections);
 				getConvertAnonymousToNestedProposal(context, coveringNode, resultingCollections);
@@ -339,7 +341,40 @@ public class QuickAssistProcessor implements IQuickAssistProcessor {
 		return true;
 	}
 
+	private static boolean getIntroduceParameterProposal(IInvocationContext context, ASTNode coveringNode, boolean problemsAtLocation, Collection<ICommandAccess> proposals) throws CoreException {
+		if (!(coveringNode instanceof Expression) && !(coveringNode instanceof Statement) && !(coveringNode instanceof Block)) {
+			return false;
+		}
+		if (coveringNode instanceof Block) {
+			List<Statement> statements= ((Block) coveringNode).statements();
+			int startIndex= getIndex(context.getSelectionOffset(), statements);
+			if (startIndex == -1)
+				return false;
+			int endIndex= getIndex(context.getSelectionOffset() + context.getSelectionLength(), statements);
+			if (endIndex == -1 || endIndex <= startIndex)
+				return false;
+		}
 
+		if (proposals == null) {
+			return true;
+		}
+
+		final ICompilationUnit cu= context.getCompilationUnit();
+		final ExtractMethodRefactoring extractMethodRefactoring= new ExtractMethodRefactoring(context.getASTRoot(), context.getSelectionOffset(), context.getSelectionLength());
+		extractMethodRefactoring.setMethodName("extracted"); //$NON-NLS-1$
+		if (extractMethodRefactoring.checkInitialConditions(new NullProgressMonitor()).isOK()) {
+			String label= CorrectionMessages.QuickAssistProcessor_introduceparameter_description;
+			LinkedProposalModel linkedProposalModel= new LinkedProposalModel();
+			extractMethodRefactoring.setLinkedProposalModel(linkedProposalModel);
+
+			Image image= JavaPluginImages.get(JavaPluginImages.IMG_MISC_PUBLIC);
+			int relevance= problemsAtLocation ? 1 : 4;
+			RefactoringCorrectionProposal proposal= new RefactoringCorrectionProposal(label, cu, extractMethodRefactoring, relevance, image);
+			proposal.setLinkedProposalModel(linkedProposalModel);
+			proposals.add(proposal);
+		}
+		return true;
+	}
 
 	private static boolean getExtractVariableProposal(IInvocationContext context, boolean problemsAtLocation, Collection<ICommandAccess> proposals) throws CoreException {
 		

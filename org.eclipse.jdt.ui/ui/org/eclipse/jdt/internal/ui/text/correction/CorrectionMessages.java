@@ -346,6 +346,7 @@ public final class CorrectionMessages extends NLS {
 	public static String QuickAssistProcessor_extract_to_local_all_description;
 	public static String QuickAssistProcessor_extract_to_local_description;
 	public static String QuickAssistProcessor_extractmethod_description;
+	public static String QuickAssistProcessor_introduceparameter_description;
 	public static String QuickAssistProcessor_move_exception_to_separate_catch_block;
 	public static String QuickAssistProcessor_move_exceptions_to_separate_catch_block;
 	public static String SuppressWarningsSubProcessor_suppress_warnings_label;
