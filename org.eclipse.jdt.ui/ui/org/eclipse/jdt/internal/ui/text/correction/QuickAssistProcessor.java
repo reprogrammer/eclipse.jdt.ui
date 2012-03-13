@@ -36,6 +36,7 @@ import org.eclipse.jface.text.link.LinkedPositionGroup;
 
 import org.eclipse.ui.IEditorPart;
 
+import org.eclipse.ltk.core.refactoring.Change;
 import org.eclipse.ltk.core.refactoring.Refactoring;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
 import org.eclipse.ltk.core.refactoring.TextChange;
@@ -136,6 +137,7 @@ import org.eclipse.jdt.internal.corext.refactoring.code.ExtractConstantRefactori
 import org.eclipse.jdt.internal.corext.refactoring.code.ExtractMethodRefactoring;
 import org.eclipse.jdt.internal.corext.refactoring.code.ExtractTempRefactoring;
 import org.eclipse.jdt.internal.corext.refactoring.code.InlineTempRefactoring;
+import org.eclipse.jdt.internal.corext.refactoring.code.IntroduceParameterRefactoring;
 import org.eclipse.jdt.internal.corext.refactoring.code.PromoteTempToFieldRefactoring;
 import org.eclipse.jdt.internal.corext.refactoring.util.TightSourceRangeComputer;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
@@ -342,35 +344,32 @@ public class QuickAssistProcessor implements IQuickAssistProcessor {
 	}
 
 	private static boolean getIntroduceParameterProposal(IInvocationContext context, ASTNode coveringNode, boolean problemsAtLocation, Collection<ICommandAccess> proposals) throws CoreException {
-		if (!(coveringNode instanceof Expression) && !(coveringNode instanceof Statement) && !(coveringNode instanceof Block)) {
+		if (!(coveringNode instanceof Expression)) {
 			return false;
 		}
-		if (coveringNode instanceof Block) {
-			List<Statement> statements= ((Block) coveringNode).statements();
-			int startIndex= getIndex(context.getSelectionOffset(), statements);
-			if (startIndex == -1)
-				return false;
-			int endIndex= getIndex(context.getSelectionOffset() + context.getSelectionLength(), statements);
-			if (endIndex == -1 || endIndex <= startIndex)
-				return false;
-		}
-
+		
 		if (proposals == null) {
 			return true;
 		}
 
 		final ICompilationUnit cu= context.getCompilationUnit();
-		final ExtractMethodRefactoring extractMethodRefactoring= new ExtractMethodRefactoring(context.getASTRoot(), context.getSelectionOffset(), context.getSelectionLength());
-		extractMethodRefactoring.setMethodName("extracted"); //$NON-NLS-1$
-		if (extractMethodRefactoring.checkInitialConditions(new NullProgressMonitor()).isOK()) {
+		final IntroduceParameterRefactoring introduceParameterRefactoring= new IntroduceParameterRefactoring(cu, context.getSelectionOffset(), context.getSelectionLength());
+
+		if (introduceParameterRefactoring.checkInitialConditions(new NullProgressMonitor()).isOK()) {
 			String label= CorrectionMessages.QuickAssistProcessor_introduceparameter_description;
-			LinkedProposalModel linkedProposalModel= new LinkedProposalModel();
-			extractMethodRefactoring.setLinkedProposalModel(linkedProposalModel);
 
 			Image image= JavaPluginImages.get(JavaPluginImages.IMG_MISC_PUBLIC);
 			int relevance= problemsAtLocation ? 1 : 4;
-			RefactoringCorrectionProposal proposal= new RefactoringCorrectionProposal(label, cu, extractMethodRefactoring, relevance, image);
-			proposal.setLinkedProposalModel(linkedProposalModel);
+			RefactoringStatus status= introduceParameterRefactoring.checkFinalConditions(new NullProgressMonitor());
+			Change change = null;
+			if (status.hasFatalError()) {
+				change= new TextFileChange("fatal error", (IFile) cu.getResource()); //$NON-NLS-1$
+				((TextFileChange)change).setEdit(new InsertEdit(0, "")); //$NON-NLS-1$
+			} else {
+				change= introduceParameterRefactoring.createChange(new NullProgressMonitor());
+			}
+			ChangeCorrectionProposal proposal= new ChangeCorrectionProposal(label, change, relevance, image);
+
 			proposals.add(proposal);
 		}
 		return true;
@@ -2715,8 +2714,8 @@ public class QuickAssistProcessor implements IQuickAssistProcessor {
 	}
 
 	private static class RefactoringCorrectionProposal extends CUCorrectionProposal {
-		private final Refactoring fRefactoring;
-		private RefactoringStatus fRefactoringStatus;
+		protected final Refactoring fRefactoring;
+		protected RefactoringStatus fRefactoringStatus;
 
 		public RefactoringCorrectionProposal(String name, ICompilationUnit cu, Refactoring refactoring, int relevance, Image image) {
 			super(name, cu, null, relevance, image);
