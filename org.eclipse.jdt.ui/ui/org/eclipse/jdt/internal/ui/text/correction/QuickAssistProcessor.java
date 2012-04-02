@@ -10,6 +10,7 @@
  *     Sebastian Davids <sdavids@gmx.de> - Bug 37432 getInvertEqualsProposal
  *     Benjamin Muskalla <b.muskalla@gmx.net> - Bug 36350 convertToStringBufferPropsal
  *     Chris West (Faux) <eclipse@goeswhere.com> - [quick assist] "Use 'StringBuilder' for string concatenation" could fix existing misuses - https://bugs.eclipse.org/bugs/show_bug.cgi?id=282755
+ *     Kyle Doren <doren1@illinois.edu>, Yalan Meng <mengyalan@gmail.com>, Mohsen Vakilian <reprogrammer@gmail.com> - [quick assist] Introduce parameter from expression - https://bugs.eclipse.org/255123
  *******************************************************************************/
 package org.eclipse.jdt.internal.ui.text.correction;
 
